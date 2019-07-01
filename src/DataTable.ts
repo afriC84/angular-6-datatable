@@ -38,10 +38,12 @@ export class DataTable implements OnChanges, DoCheck {
     @Input('mfSortOrder') sortOrder = 'asc';
     @Input('mfRowsOnPage') rowsOnPage = 1000;
     @Input('mfActivePage') activePage = 1;
-    @Input('mfSortedDataAttributes') sortedDataAttributes: string[];
+    /** Can be set to pick only selected attributes of each emitted data in mfSortedDataChange */
+    @Input('mfSortedDataAttributes') sortedDataAttributes?: string[];
 
     @Output('mfSortByChange') sortByChange = new EventEmitter<string | string[]>();
     @Output('mfSortOrderChange') sortOrderChange = new EventEmitter<string>();
+    /** Contains the data after being sorted */
     @Output('mfSortedDataChange') sortedDataChange = new EventEmitter<any[]>();
 
     data: any[];
