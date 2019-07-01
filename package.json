@@ -1,6 +1,6 @@
 {
-  "name": "angular-6-datatable",
-  "version": "0.8.0",
+  "name": "angular-6-datatable-sy",
+  "version": "0.8.1",
   "description": "DataTable component for Angular framework",
   "main": "index.js",
   "scripts": {
@@ -27,12 +27,9 @@
     "sort",
     "sorting"
   ],
-  "author": "khan.abdul1@outlook.com",
+  "author": "Colja Carls",
   "license": "MIT",
-  "bugs": {
-    "url": "https://github.com/mariuszfoltak/angular2-datatable/issues"
-  },
-  "homepage": "https://github.com/mariuszfoltak/angular2-datatable#readme",
+  "homepage": "https://github.com/afriC84/angular-6-datatable#readme",
   "devDependencies": {
     "@angular/core": "^6.0.0",
     "@angular/compiler": "^6.0.0",

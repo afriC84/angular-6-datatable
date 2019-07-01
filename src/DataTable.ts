@@ -1,6 +1,13 @@
 import {
-    Directive, Input, EventEmitter, SimpleChange, OnChanges, DoCheck, IterableDiffers,
-    IterableDiffer, Output
+    Directive,
+    DoCheck,
+    EventEmitter,
+    Input,
+    IterableDiffer,
+    IterableDiffers,
+    OnChanges,
+    Output,
+    SimpleChange
 } from '@angular/core';
 import * as _ from 'lodash';
 import { ReplaySubject } from 'rxjs';
@@ -31,9 +38,11 @@ export class DataTable implements OnChanges, DoCheck {
     @Input('mfSortOrder') sortOrder = 'asc';
     @Input('mfRowsOnPage') rowsOnPage = 1000;
     @Input('mfActivePage') activePage = 1;
+    @Input('mfSortedDataAttributes') sortedDataAttributes: string[];
 
     @Output('mfSortByChange') sortByChange = new EventEmitter<string | string[]>();
     @Output('mfSortOrderChange') sortOrderChange = new EventEmitter<string>();
+    @Output('mfSortedDataChange') sortedDataChange = new EventEmitter<any[]>();
 
     data: any[];
 
@@ -135,7 +144,7 @@ export class DataTable implements OnChanges, DoCheck {
     private fillData(): void {
         let offset = (this.activePage - 1) * this.rowsOnPage;
         let data = this.inputData;
-        var sortBy = this.sortBy;
+        const sortBy = this.sortBy;
         if (typeof sortBy === 'string' || sortBy instanceof String) {
             data = _.orderBy(data, this.caseInsensitiveIteratee(<string>sortBy), [this.sortOrder]);
         } else {
@@ -143,11 +152,20 @@ export class DataTable implements OnChanges, DoCheck {
         }
         data = _.slice(data, offset, offset + this.rowsOnPage);
         this.data = data;
+        this.emitSortedData(data);
+    }
+
+    private emitSortedData(data) {
+        let sortedData = data;
+        if (!!this.sortedDataAttributes && Array.isArray(this.sortedDataAttributes)) {
+            sortedData = [...data].map(d => _.pick(d, this.sortedDataAttributes));
+        }
+        this.sortedDataChange.emit(sortedData);
     }
 
     private caseInsensitiveIteratee(sortBy: string) {
         return (row: any): any => {
-            var value = row;
+            let value = row;
             for (let sortByProperty of sortBy.split('.')) {
                 if (value) {
                     value = value[sortByProperty];
