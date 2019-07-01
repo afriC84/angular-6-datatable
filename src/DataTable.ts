@@ -1,12 +1,12 @@
 import {
     Directive, Input, EventEmitter, SimpleChange, OnChanges, DoCheck, IterableDiffers,
     IterableDiffer, Output
-} from "@angular/core";
-import * as _ from "lodash";
-import {ReplaySubject} from "rxjs";
+} from '@angular/core';
+import * as _ from 'lodash';
+import { ReplaySubject } from 'rxjs';
 
 export interface SortEvent {
-    sortBy: string|string[];
+    sortBy: string | string[];
     sortOrder: string
 }
 
@@ -26,36 +26,35 @@ export interface DataEvent {
 })
 export class DataTable implements OnChanges, DoCheck {
 
+    @Input('mfData') inputData: any[] = [];
+    @Input('mfSortBy') sortBy: string | string[] = '';
+    @Input('mfSortOrder') sortOrder = 'asc';
+    @Input('mfRowsOnPage') rowsOnPage = 1000;
+    @Input('mfActivePage') activePage = 1;
+
+    @Output('mfSortByChange') sortByChange = new EventEmitter<string | string[]>();
+    @Output('mfSortOrderChange') sortOrderChange = new EventEmitter<string>();
+
+    data: any[];
+
+    onSortChange = new ReplaySubject<SortEvent>(1);
+    onPageChange = new EventEmitter<PageEvent>();
+
     private diff: IterableDiffer<any>;
-    @Input("mfData") public inputData: any[] = [];
-
-    @Input("mfSortBy") public sortBy: string|string[] = "";
-    @Input("mfSortOrder") public sortOrder = "asc";
-    @Output("mfSortByChange") public sortByChange = new EventEmitter<string|string[]>();
-    @Output("mfSortOrderChange") public sortOrderChange = new EventEmitter<string>();
-
-    @Input("mfRowsOnPage") public rowsOnPage = 1000;
-    @Input("mfActivePage") public activePage = 1;
-
     private mustRecalculateData = false;
 
-    public data: any[];
-
-    public onSortChange = new ReplaySubject<SortEvent>(1);
-    public onPageChange = new EventEmitter<PageEvent>();
-
-    public constructor(private differs: IterableDiffers) {
+    constructor(private differs: IterableDiffers) {
         this.diff = differs.find([]).create(null);
     }
 
-    public getSort(): SortEvent {
+    getSort(): SortEvent {
         return {sortBy: this.sortBy, sortOrder: this.sortOrder};
     }
 
-    public setSort(sortBy: string|string[], sortOrder: string): void {
+    setSort(sortBy: string | string[], sortOrder: string): void {
         if (this.sortBy !== sortBy || this.sortOrder !== sortOrder) {
             this.sortBy = sortBy;
-            this.sortOrder = _.includes(["asc","desc"], sortOrder) ? sortOrder : "asc";
+            this.sortOrder = _.includes(['asc', 'desc'], sortOrder) ? sortOrder : 'asc';
             this.mustRecalculateData = true;
             this.onSortChange.next({sortBy: sortBy, sortOrder: sortOrder});
             this.sortByChange.emit(this.sortBy);
@@ -63,11 +62,11 @@ export class DataTable implements OnChanges, DoCheck {
         }
     }
 
-    public getPage(): PageEvent {
+    getPage(): PageEvent {
         return {activePage: this.activePage, rowsOnPage: this.rowsOnPage, dataLength: this.inputData.length};
     }
 
-    public setPage(activePage: number, rowsOnPage: number): void {
+    setPage(activePage: number, rowsOnPage: number): void {
         if (this.rowsOnPage !== rowsOnPage || this.activePage !== activePage) {
             this.activePage = this.activePage !== activePage ? activePage : this.calculateNewActivePage(this.rowsOnPage, rowsOnPage);
             this.rowsOnPage = rowsOnPage;
@@ -77,6 +76,41 @@ export class DataTable implements OnChanges, DoCheck {
                 rowsOnPage: this.rowsOnPage,
                 dataLength: this.inputData ? this.inputData.length : 0
             });
+        }
+    }
+
+    ngOnChanges(changes: { [key: string]: SimpleChange }): any {
+        if (changes['rowsOnPage']) {
+            this.rowsOnPage = changes['rowsOnPage'].previousValue;
+            this.setPage(this.activePage, changes['rowsOnPage'].currentValue);
+            this.mustRecalculateData = true;
+        }
+        if (changes['sortBy'] || changes['sortOrder']) {
+            if (!_.includes(['asc', 'desc'], this.sortOrder)) {
+                console.warn('angular2-datatable: value for input mfSortOrder must be one of [\'asc\', \'desc\'], but is:', this.sortOrder);
+                this.sortOrder = 'asc';
+            }
+            if (this.sortBy) {
+                this.onSortChange.next({sortBy: this.sortBy, sortOrder: this.sortOrder});
+            }
+            this.mustRecalculateData = true;
+        }
+        if (changes['inputData']) {
+            this.inputData = changes['inputData'].currentValue || [];
+            this.recalculatePage();
+            this.mustRecalculateData = true;
+        }
+    }
+
+    ngDoCheck(): any {
+        let changes = this.diff.diff(this.inputData);
+        if (changes) {
+            this.recalculatePage();
+            this.mustRecalculateData = true;
+        }
+        if (this.mustRecalculateData) {
+            this.fillData();
+            this.mustRecalculateData = false;
         }
     }
 
@@ -98,45 +132,7 @@ export class DataTable implements OnChanges, DoCheck {
         });
     }
 
-    public ngOnChanges(changes: {[key: string]: SimpleChange}): any {
-        if (changes["rowsOnPage"]) {
-            this.rowsOnPage = changes["rowsOnPage"].previousValue;
-            this.setPage(this.activePage, changes["rowsOnPage"].currentValue);
-            this.mustRecalculateData = true;
-        }
-        if (changes["sortBy"] || changes["sortOrder"]) {
-            if (!_.includes(["asc", "desc"], this.sortOrder)) {
-                console.warn("angular2-datatable: value for input mfSortOrder must be one of ['asc', 'desc'], but is:", this.sortOrder);
-                this.sortOrder = "asc";
-            }
-            if (this.sortBy) {
-                this.onSortChange.next({sortBy: this.sortBy, sortOrder: this.sortOrder});
-            }
-            this.mustRecalculateData = true;
-        }
-        if (changes["inputData"]) {
-            this.inputData = changes["inputData"].currentValue || [];
-            this.recalculatePage();
-            this.mustRecalculateData = true;
-        }
-    }
-
-    public ngDoCheck(): any {
-        let changes = this.diff.diff(this.inputData);
-        if (changes) {
-            this.recalculatePage();
-            this.mustRecalculateData = true;
-        }
-        if (this.mustRecalculateData) {
-            this.fillData();
-            this.mustRecalculateData = false;
-        }
-    }
-
     private fillData(): void {
-        this.activePage = this.activePage;
-        this.rowsOnPage = this.rowsOnPage;
-
         let offset = (this.activePage - 1) * this.rowsOnPage;
         let data = this.inputData;
         var sortBy = this.sortBy;
@@ -153,7 +149,7 @@ export class DataTable implements OnChanges, DoCheck {
         return (row: any): any => {
             var value = row;
             for (let sortByProperty of sortBy.split('.')) {
-                if(value) {
+                if (value) {
                     value = value[sortByProperty];
                 }
             }
